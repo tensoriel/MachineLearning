@@ -1,0 +1,76 @@
+---
+title: "MACHINE LEARNING COURSE PROJECT"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+## Executive Summary
+## ------------------------
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+
+## The data: obtain and clean
+##--------------------------------
+
+```{r, echo=TRUE}
+library(knitr)
+library(caret, quietly=TRUE)
+library(kernlab)
+library(corrplot)
+library(tseries)
+library(randomForest) 
+# download the file 
+#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", 
+              #destfile = '~yamina/Desktop/ShinyApp/', method="curl" )
+#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+              #destfile =  '~yamina/Desktop/ShinyApp/', method="curl")
+
+data_training <- read.csv('pml-training.csv',na.strings= c("NA",""," "))
+str(data_training)
+#head(data_training)
+
+# clean the data
+data_training1 <- apply(data_training, 2, function(x) {sum(is.na(x))})
+data_training2 <- data_training[,which(data_training1 == 0)]
+data_training2 <- data_training2[8:length(data_training2)]
+
+# split the data 
+inTrain <- createDataPartition(y = data_training2$classe, p = 0.7, list = FALSE)
+training <- data_training2[inTrain, ]
+crossval <- data_training2[-inTrain, ]
+correlMatrix <- cor(training[, -length(training)])
+corrplot(correlMatrix, order = "FPC", method = "circle", type = "lower", tl.cex = 0.8,  tl.col = rgb(0, 0, 0))
+
+```
+
+
+## Fitting a Random Forest Model
+## ----------------------------------
+A random forest model was selected to predict the classification and a correllation plot was produced to
+observe how strong the variables are correlated with each other.
+
+```{r, echo=TRUE}
+rmf <- randomForest(classe ~ ., data = training)
+rmf
+confusionMatrix(crossval$classe, predict(rmf, crossval))
+
+```
+
+
+## Perfoming Predictions
+## ---------------------------
+The model listed above is used to predict the classifications of the 20 results of new data that was
+proceesed in the same way.
+
+```{r, echo=TRUE}
+data_pre <- read.csv("pml-testing.csv", na.strings= c("NA",""," "))
+data_test1 <- apply(data_pre, 2, function(x) {sum(is.na(x))})
+data_test2 <- data_pre[,which(data_test1 == 0)]
+data_test2 <- data_test2[8:length(data_test2)]
+preTest <- predict(rmf, data_test2)
+preTest 
+str(preTest)
+```
+
+
